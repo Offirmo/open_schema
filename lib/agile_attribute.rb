@@ -5,9 +5,40 @@
 
 
 module AgileAttribute
+
+	####### The base class for storing any data
+	# all data will inherit from this class
+	class OpenSchemaData < ActiveRecord::Base
+
+		default_value_for :open_schema_data_owner_version, 0
+		default_value_for :computed, true # most likely
+		
+		belongs_to :open_schema_data_owner,        :polymorphic => true, :validate => false # a meta-data can belongs to any model class which is a metadata_owner
+		belongs_to :open_schema_data_owner_parent, :polymorphic => true # a meta-data can belongs to any model class which is a metadata_parent_owner
+		
+		# most likely due to delegates_attribute_to, this data is marqued "changed" after a simple read !
+		# It is then created in database, for nothing.
+		# Thus, we prevent the save if this data is new (no id) and its value is nil
+		# def before_save()
+			# puts "before_save : " + self.inspect
+			# is_new = self.id.nil?
+			# is_empty = self.value.nil?
+			# should_not_create = (is_new and is_empty)
+			# puts "#{is_new} and #{is_empty} => should_not_create : #{should_not_create}"
+			#!should_not_create
+			# true
+		# end
+		
+		# def after_commit()
+			# should_destroy = !self.id.nil? and self.value.nil?
+			# puts "should_destroy : " + should_destroy.inspect
+			# if should_destroy then self.delete end
+			# true
+		# end
+		
+	end
+
 	extend ActiveSupport::Concern # http://www.fakingfantastic.com/2010/09/20/concerning-yourself-with-active-support-concern/
-	
-	
 	
 	included do
 		#puts "Adding AgileAttribute - this will make your class awesome. Proceed with awesomeness."
@@ -116,6 +147,10 @@ module AgileAttribute
 			
 			table_name = table_name_for_attribute(attribute)
 			
+			base_class = OpenSchemaData
+			record_name_camel = "OpenSchemaData"
+			record_name_table = record_name_camel.tableize.singularize
+			#record_value_field_name = "value"
 			# proceed with meta-programmation
 			
 			# storing info about this agile attribute, for later access
@@ -123,28 +158,29 @@ module AgileAttribute
 			self.agile_attributes[table_name] = params_hash
 			
 			# We create a new STI class
-			meta_class_name = table_name.camelize + "MetaData"
+			meta_class_name = record_name_camel + table_name.camelize
 			#puts ">>> Dynamically creating a MetaData STI subclass called \"#{meta_class_name}\""
-			c = Class.new(MetaData) # New class inheriting from MetaData
+			c = Class.new(base_class) # New class inheriting from the base class
 			const_set meta_class_name, c # registering this new class with the desired name, cf. http://johnragan.org/2010/02/18/ruby-metaprogramming-dynamically-defining-classes-and-methods/
 			
 			# Check :
 			# puts class_name.constantize # doesn't work but STI and relations are working perfectly
 			
-			meta_table_name = table_name + "_meta_data"
+			meta_table_name = record_name_table + "_" + table_name
 			#puts ">>> Adding a 'has_one' relation to :#{meta_table_name}..."
-			has_one meta_table_name.to_sym, :as => :metadata_owner, :foreign_key => "metadata_owner_id", :autosave => true, :dependent => :destroy
+			has_one meta_table_name.to_sym, :as => (record_name_table + "_owner").to_sym, :foreign_key => (record_name_table + "_owner_id"), :dependent => :destroy, :autosave => true
 			
 			delegated_table_name = table_name + '_' + 'value'
 			#puts ">>> Adding delegation for easy access of MetaData value via '.#{delegated_table_name}'..."
-			# using git://github.com/pahanix/delegates_attributes_to.git
-			delegates_attributes :value, :to => meta_table_name.to_sym, :prefix => table_name.to_sym
+			# using a modified version of git://github.com/pahanix/delegates_attributes_to.git
+			delegates_attribute_to_open_schema_data :value, :to => meta_table_name.to_sym, :prefix => table_name.to_sym #, :autosave => false
 			
 			# adding accessors for the attribute
 			alias_attribute table_name.to_sym, delegated_table_name.to_sym # thank you !
+			
 			# we override the read accessor because we need to cast the attribute type according to its desired type (since it's always stored as a string)
 			# thank you http://stackoverflow.com/questions/2499247/dynamically-defined-setter-methods-using-define-method and http://stackoverflow.com/questions/373731/override-activerecord-attribute-methods
-			define_method("#{table_name}") do
+			define_method("#{table_name}x") do
 				#puts "you requested the :#{table_name} attribute !"
 				#puts "params for this attribute are : #{self.agile_attributes[table_name]}"
 				
@@ -154,7 +190,8 @@ module AgileAttribute
 				
 				# and then we convert it if a type was provided and if necessary
 				converted_value = raw_value # no change by default
-				if self.agile_attributes[table_name].has_key?(:type) then
+				# no conversion if nil, to show that the value is missing
+				if (!raw_value.nil?) and self.agile_attributes[table_name].has_key?(:type) then
 					case self.agile_attributes[table_name][:type]
 					when :integer
 						converted_value = raw_value.to_i
@@ -170,10 +207,9 @@ module AgileAttribute
 						# nothing to do (true ?)
 					when :references
 						# what is this type ? I don't care for now.
-						xxx
 					else
 						# unknown type ? impossible !
-						xxx
+						fail # TODO raise exception
 					end
 				else
 					# no change
@@ -181,6 +217,7 @@ module AgileAttribute
 				
 				return converted_value
 			end # dynamic read accessor redefinition
+			
 		end # install_stuff_with_meta_programming
 		
 		def table_name_for_attribute(attr)
@@ -196,8 +233,9 @@ module AgileAttribute
 	
 	
 	module InstanceMethods
-		# nothing
+		# none
 	end
+	
 end
 
 class ActiveRecord::Base
