@@ -1,5 +1,0 @@
-
-module OpenSchema
-
-
-end

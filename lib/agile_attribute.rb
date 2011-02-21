@@ -6,43 +6,11 @@
 
 module AgileAttribute
 
-	####### The base class for storing any data
-	# all data will inherit from this class
-	class OpenSchemaData < ActiveRecord::Base
-
-		default_value_for :open_schema_data_owner_version, 0
-		default_value_for :computed, true # most likely
-		
-		belongs_to :open_schema_data_owner,        :polymorphic => true, :validate => false # a meta-data can belongs to any model class which is a metadata_owner
-		belongs_to :open_schema_data_owner_parent, :polymorphic => true # a meta-data can belongs to any model class which is a metadata_parent_owner
-		
-		# most likely due to delegates_attribute_to, this data is marqued "changed" after a simple read !
-		# It is then created in database, for nothing.
-		# Thus, we prevent the save if this data is new (no id) and its value is nil
-		# def before_save()
-			# puts "before_save : " + self.inspect
-			# is_new = self.id.nil?
-			# is_empty = self.value.nil?
-			# should_not_create = (is_new and is_empty)
-			# puts "#{is_new} and #{is_empty} => should_not_create : #{should_not_create}"
-			#!should_not_create
-			# true
-		# end
-		
-		# def after_commit()
-			# should_destroy = !self.id.nil? and self.value.nil?
-			# puts "should_destroy : " + should_destroy.inspect
-			# if should_destroy then self.delete end
-			# true
-		# end
-		
-	end
-
 	extend ActiveSupport::Concern # http://www.fakingfantastic.com/2010/09/20/concerning-yourself-with-active-support-concern/
 	
 	included do
 		#puts "Adding AgileAttribute - this will make your class awesome. Proceed with awesomeness."
-
+		
 		class_eval do
 			class_inheritable_hash :agile_attributes # to allow inheritance, cf. http://www.spacevatican.org/2008/8/19/fun-with-class-variables
 			self.agile_attributes = {}
