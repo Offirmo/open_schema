@@ -180,6 +180,7 @@ module AgileAttribute
 			
 			# we override the read accessor because we need to cast the attribute type according to its desired type (since it's always stored as a string)
 			# thank you http://stackoverflow.com/questions/2499247/dynamically-defined-setter-methods-using-define-method and http://stackoverflow.com/questions/373731/override-activerecord-attribute-methods
+			remove_method table_name.to_sym # we remove before redefining, to show that we know what we do and suppress a ruby warning
 			define_method("#{table_name}") do
 				#puts "you requested the :#{table_name} attribute !"
 				#puts "params for this attribute are : #{self.agile_attributes[table_name]}"
