@@ -9,7 +9,7 @@ module AgileAttribute
 	extend ActiveSupport::Concern # http://www.fakingfantastic.com/2010/09/20/concerning-yourself-with-active-support-concern/
 	
 	included do
-		#puts "Adding AgileAttribute - this will make your class awesome. Proceed with awesomeness."
+		# puts "Adding AgileAttribute - this will make your classes awesome. Proceed with awesomeness."
 		
 		class_eval do
 			class_inheritable_hash :agile_attributes # to allow inheritance, cf. http://www.spacevatican.org/2008/8/19/fun-with-class-variables
@@ -18,29 +18,60 @@ module AgileAttribute
 	end
 	
 	
-	
 	module ClassMethods
-	
+		
+		# CONSTANTE = 12
+		# @@class_var1 = 33
+		# def class_var1
+			# @@class_var1
+		# end
+		
+		# this function is used in the code
+		def table_name_for_agile_attribute(attr)
+			attr.to_s
+		end
+		
+		# this function is NOT used in the code, it's here for debug/inspection
+		def debug_agile_attribute(attr)
+			puts "attribute                  = " + attr.inspect
+			table_name = table_name_for_agile_attribute(attr)
+			puts "attribute table name       = " + table_name
+			base_class_name_camel = "OpenSchemaDatum"
+			puts "base data class name       = " + base_class_name_camel
+			base_class_name_table = base_class_name_camel.tableize.singularize
+			puts "base data class table name = " + base_class_name_table
+			meta_class_name = base_class_name_camel + table_name.camelize
+			puts "meta class name            = " + meta_class_name
+			meta_class_table_name = base_class_name_table + "_" + table_name
+			puts "meta class table name      = " + meta_class_table_name
+			delegated_table_name = table_name + '_' + 'value'
+			puts "delegated table name       = " + delegated_table_name
+		end
+		
 		# our main method
 		# +agile_attribute+ accepts one symbol and many arguments, representing ...
 		def agile_attribute(attribute, *params, &block)
 			
 			there_is_a_problem = false
-
-			#puts ">>> Found agile_attribute declaration \"#{attribute}\" with #{params}..."
-				
+			
+			# puts ">>> Found agile_attribute declaration \"#{attribute}\" with #{params}..."
+			
+			# puts "CONSTANTE = " + CONSTANTE.inspect
+			# puts "@@class_var1 = " + class_var1.inspect
+			# puts "self.agile_attributes = " + self.agile_attributes.inspect
+			
 			# pre-check
 			if not attribute.is_a? Symbol then
-				raise ArgumentError, 'Please review your agile_attribute configuration (1)'
+				raise ArgumentError, 'Please review your agile_attribute configuration : attribute name is not a symbol.'
 				there_is_a_problem = true
 			else
-				table_name = table_name_for_attribute(attribute)
+				table_name = table_name_for_agile_attribute(attribute)
 				
 				if table_name != table_name.singularize then
-					raise ArgumentError, 'Please review your agile_attribute configuration (2)'
+					raise ArgumentError, 'Please review your agile_attribute configuration : attribute name is not singular.'
 					there_is_a_problem = true
 				elsif self.agile_attributes.has_key?(table_name) then
-					raise ArgumentError, 'Please review your agile_attribute configuration (2b)'
+					raise ArgumentError, 'Please review your agile_attribute configuration : attribute name is already used for this class.'
 					there_is_a_problem = true
 				end
 			end
@@ -53,7 +84,8 @@ module AgileAttribute
 			install_stuff_with_meta_programming(attribute, params_hash) unless there_is_a_problem
 			
 			if there_is_a_problem then
-				raise ArgumentError, 'Please review your agile_attribute configuration'
+				# do we arrive here ?
+				raise ArgumentError, 'Please review your agile_attribute configuration.'
 			end
 		end # attribute declaration
 
@@ -73,7 +105,7 @@ module AgileAttribute
 					#puts "   arg #{k} [#{k.class}] => #{v} [#{v.class}]"
 					
 					if not k.is_a? Symbol then
-						raise ArgumentError, 'Please review your agile_attribute configuration (3)'
+						raise ArgumentError, 'Please review your agile_attribute configuration : param key is incorrect (not a symbol).'
 						there_is_a_problem = true
 						break
 					else
@@ -82,19 +114,19 @@ module AgileAttribute
 							# TODO
 						when :type
 							if not [ :integer, :boolean, :string, :text, :decimal, :timestamp, :references ].include?(v) then
-								raise ArgumentError, 'Please review your agile_attribute configuration (3b)'
+								raise ArgumentError, 'Please review your agile_attribute configuration : param value is not allowed.'
 								there_is_a_problem = true
 								break
 							elsif params_hash.has_key?(:type) then
 								# technically impossible since params is a hash
-								raise ArgumentError, 'Please review your agile_attribute configuration (3c)'
+								raise ArgumentError, 'Please review your agile_attribute configuration : param key has been declared several times.'
 								there_is_a_problem = true
 								break
 							else
 								params_hash[:type] = v
 							end
 						else
-							raise ArgumentError, 'Please review your agile_attribute configuration (4)'
+							raise ArgumentError, 'Please review your agile_attribute configuration : param key is unknown.'
 							there_is_a_problem = true
 							break
 						end
@@ -102,7 +134,7 @@ module AgileAttribute
 				end # loop over params
 			else
 				# possible ???
-				raise ArgumentError, 'Please review your agile_attribute configuration (5)'
+				raise ArgumentError, 'Please review your agile_attribute configuration.'
 				there_is_a_problem = true
 			end
 			
@@ -113,10 +145,10 @@ module AgileAttribute
 		
 		def install_stuff_with_meta_programming(attribute, params_hash)
 			
-			table_name = table_name_for_attribute(attribute)
+			table_name = table_name_for_agile_attribute(attribute)
 			
-			base_class = OpenSchemaData
-			record_name_camel = "OpenSchemaData"
+			base_class = OpenSchemaDatum
+			record_name_camel = "OpenSchemaDatum"
 			record_name_table = record_name_camel.tableize.singularize
 			#record_value_field_name = "value"
 			# proceed with meta-programmation
@@ -127,7 +159,7 @@ module AgileAttribute
 			
 			# We create a new STI class
 			meta_class_name = record_name_camel + table_name.camelize
-			#puts ">>> Dynamically creating a MetaData STI subclass called \"#{meta_class_name}\""
+			#puts ">>> Dynamically creating a MetaDatum STI subclass called \"#{meta_class_name}\""
 			c = Class.new(base_class) # New class inheriting from the base class
 			const_set meta_class_name, c # registering this new class with the desired name, cf. http://johnragan.org/2010/02/18/ruby-metaprogramming-dynamically-defining-classes-and-methods/
 			
@@ -139,9 +171,9 @@ module AgileAttribute
 			has_one meta_table_name.to_sym, :as => (record_name_table + "_owner").to_sym, :foreign_key => (record_name_table + "_owner_id"), :dependent => :destroy, :autosave => true
 			
 			delegated_table_name = table_name + '_' + 'value'
-			#puts ">>> Adding delegation for easy access of MetaData value via '.#{delegated_table_name}'..."
+			#puts ">>> Adding delegation for easy access of MetaDatum value via '.#{delegated_table_name}'..."
 			# using a modified version of git://github.com/pahanix/delegates_attributes_to.git
-			delegates_attribute_to_open_schema_data :value, :to => meta_table_name.to_sym, :prefix => table_name.to_sym #, :autosave => false
+			delegates_attribute_to_open_schema_datum :value, :to => meta_table_name.to_sym, :prefix => table_name.to_sym #, :autosave => false
 			
 			# adding accessors for the attribute
 			alias_attribute table_name.to_sym, delegated_table_name.to_sym # thank you !
@@ -189,16 +221,11 @@ module AgileAttribute
 			
 		end # install_stuff_with_meta_programming
 		
-		def table_name_for_attribute(attr)
-			attr.to_s
-		end
-		
 		# is this class "agile" ? Does it have agile attributes ?
 		def agile?
 			!agile_attribute.blank?
 		end
 	end
-
 	
 	
 	module InstanceMethods

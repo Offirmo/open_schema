@@ -1,6 +1,6 @@
 # based on delegates_attributes_to
 # but customized for our needs
-module DelegatesAttributesToOpenSchemaData
+module DelegatesAttributesToOpenSchemaDatum
 
 	DEFAULT_REJECTED_COLUMNS = ['created_at','created_on','updated_at','updated_on','lock_version','type','id','position','parent_id','lft','rgt'].freeze
 	DIRTY_SUFFIXES = ["_changed?", "_change", "_will_change!", "_was"].freeze
@@ -9,7 +9,7 @@ module DelegatesAttributesToOpenSchemaData
 		base.extend ClassMethods
 		base.send :include, InstanceMethods
 
-		base.alias_method_chain :assign_multiparameter_attributes, :open_schema_data_delegation
+		base.alias_method_chain :assign_multiparameter_attributes, :open_schema_datum_delegation
 
 		base.class_inheritable_accessor :default_rejected_delegate_columns
 		base.default_rejected_delegate_columns = DEFAULT_REJECTED_COLUMNS.dup
@@ -24,7 +24,7 @@ module DelegatesAttributesToOpenSchemaData
 
 		# has_one :profile
 		# delegate_attributes :to => :profile
-		def delegates_attribute_to_open_schema_data(*attributes)
+		def delegates_attribute_to_open_schema_datum(*attributes)
 			options = attributes.extract_options!
 			unless options.is_a?(Hash) && association = options[:to]
 				raise ArgumentError, "Delegation needs a target. Supply an options hash with a :to key as the last argument (e.g. delegate_attribute :hello, :to => :greeter"
@@ -88,7 +88,7 @@ module DelegatesAttributesToOpenSchemaData
 
 		private
 
-		def assign_multiparameter_attributes_with_open_schema_data_delegation(pairs)
+		def assign_multiparameter_attributes_with_open_schema_datum_delegation(pairs)
 			delegated_pairs = {}
 			original_pairs  = []
 
@@ -112,7 +112,7 @@ module DelegatesAttributesToOpenSchemaData
 				association_object.attributes = attributes
 			end
 
-			assign_multiparameter_attributes_without_open_schema_data_delegation(original_pairs)
+			assign_multiparameter_attributes_without_open_schema_datum_delegation(original_pairs)
 		end
 
 		# redefinition
@@ -151,4 +151,4 @@ end
 
 #DelegateBelongsTo = DelegatesAttributesTo unless defined?(DelegateBelongsTo)
 
-ActiveRecord::Base.send :include, DelegatesAttributesToOpenSchemaData
+ActiveRecord::Base.send :include, DelegatesAttributesToOpenSchemaDatum

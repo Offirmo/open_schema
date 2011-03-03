@@ -16,17 +16,17 @@ class CreateOpenSchema < ActiveRecord::Migration
 			t.timestamps
 		end
 		
-		create_table :open_schema_datas do |t|
+		create_table :open_schema_data do |t|
 			
 			# id + type is the pattern for a polymorphic association
-			t.integer :open_schema_data_owner_id
-			t.string  :open_schema_data_owner_type
+			t.integer :open_schema_datum_owner_id
+			t.string  :open_schema_datum_owner_type
 			
 			# whatever it is
-			t.integer :open_schema_data_owner_version
+			t.integer :open_schema_datum_owner_version
 			
 			# (optionnal) link to the parent to be able to filter more efficiently
-			t.integer :open_schema_data_owner_parent_id
+			t.integer :open_schema_datum_owner_parent_id
 			
 			# is this data computed or entered by a human ?
 			t.boolean :computed
@@ -42,6 +42,6 @@ class CreateOpenSchema < ActiveRecord::Migration
 
 	def self.down
 		drop_table :open_schema_things
-		drop_table :open_schema_datas
+		drop_table :open_schema_data
 	end
 end
