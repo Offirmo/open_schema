@@ -61,8 +61,11 @@ module AgileAttribute
 			# puts "self.agile_attributes = " + self.agile_attributes.inspect
 			
 			# pre-check
-			if not attribute.is_a? Symbol then
+			if !attribute.is_a? Symbol then
 				raise ArgumentError, 'Please review your agile_attribute configuration : attribute name is not a symbol.'
+				there_is_a_problem = true
+			if !(params.nil? || params.is_a? Hash) then
+				raise ArgumentError, 'Please review your agile_attribute configuration : params are not a hash.'
 				there_is_a_problem = true
 			else
 				table_name = table_name_for_agile_attribute(attribute)
