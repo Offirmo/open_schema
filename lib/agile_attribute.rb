@@ -47,6 +47,10 @@ module AgileAttribute
 			delegated_table_name = table_name + '_' + 'value'
 			puts "delegated table name       = " + delegated_table_name
 		end
+		# this function is NOT used in the code, it's here for debug/inspection
+		def debug_agile_attributes()
+			
+		end
 		
 		# our main method
 		# +agile_attribute+ accepts one symbol and many arguments, representing ...
@@ -54,6 +58,7 @@ module AgileAttribute
 			
 			there_is_a_problem = false
 			
+			# note : with *, params is always an array.
 			# puts ">>> Found agile_attribute declaration \"#{attribute}\" with #{params}..."
 			
 			# puts "CONSTANTE = " + CONSTANTE.inspect
@@ -61,10 +66,10 @@ module AgileAttribute
 			# puts "self.agile_attributes = " + self.agile_attributes.inspect
 			
 			# pre-check
-			if !attribute.is_a? Symbol then
+			if !attribute.is_a?(Symbol) then
 				raise ArgumentError, 'Please review your agile_attribute configuration : attribute name is not a symbol.'
 				there_is_a_problem = true
-			if !(params.nil? || params.is_a? Hash) then
+			elsif !(params.length == 0 || (params.length == 1 && params[0].is_a?(Hash))) then
 				raise ArgumentError, 'Please review your agile_attribute configuration : params are not a hash.'
 				there_is_a_problem = true
 			else
@@ -97,7 +102,7 @@ module AgileAttribute
 		def parse_and_store_parameters(attribute, *params)
 			params_hash = {}
 			
-			#puts ">>> parse_and_store_parameters for \"#{attribute}\" with #{params}..."
+			# puts ">>> parse_and_store_parameters for \"#{attribute}\" with #{params}..."
 			
 			case params.length
 			when 0
@@ -115,6 +120,8 @@ module AgileAttribute
 						case k
 						when :computed
 							# TODO
+						when :default_value
+							params_hash[:default_value] = v
 						when :type
 							if not [ :integer, :boolean, :string, :text, :decimal, :timestamp, :references ].include?(v) then
 								raise ArgumentError, 'Please review your agile_attribute configuration : param value is not allowed.'
@@ -139,7 +146,7 @@ module AgileAttribute
 				# possible ???
 				raise ArgumentError, 'Please review your agile_attribute configuration.'
 				there_is_a_problem = true
-			end
+			end # switch / case
 			
 			#puts params_hash.inspect
 			
@@ -185,28 +192,37 @@ module AgileAttribute
 			# thank you http://stackoverflow.com/questions/2499247/dynamically-defined-setter-methods-using-define-method and http://stackoverflow.com/questions/373731/override-activerecord-attribute-methods
 			remove_method table_name.to_sym # we remove before redefining, to show that we know what we do and suppress a ruby warning
 			define_method("#{table_name}") do
-				#puts "you requested the :#{table_name} attribute !"
-				#puts "params for this attribute are : #{self.agile_attributes[table_name]}"
+				# puts "you requested the :#{table_name} attribute !"
+				# puts "params for this attribute are : #{self.agile_attributes[table_name]}"
 				
 				# first we get the raw attribute value
 				delegated_table_name = table_name + '_' + 'value'
 				raw_value = self.send(delegated_table_name)
+				# puts "Current raw_value is : #{raw_value} [#{raw_value.class}]"
 				
-				# and then we convert it if a type was provided and if necessary
-				converted_value = raw_value # no change by default
-				# no conversion if nil, to show that the value is missing
-				if (!raw_value.nil?) and self.agile_attributes[table_name].has_key?(:type) then
+				# and then we convert it if a type was provided and convert it if necessary
+				final_value = raw_value # no change by default
+				if (raw_value.nil?) then
+					if self.agile_attributes[table_name].has_key?(:default_value) then
+						# no conversion if there is a default value, cause we should not have to
+						final_value = self.agile_attributes[table_name][:default_value]
+					else
+						# nil
+						# no conversion if nil, to clearly show that the value is missing
+					end
+				elsif self.agile_attributes[table_name].has_key?(:type) then
+					converted_value = final_value # no change by default
 					case self.agile_attributes[table_name][:type]
 					when :integer
-						converted_value = raw_value.to_i
+						converted_value = converted_value.to_i unless converted_value.is_a?(Fixnum)
 					when :boolean
-						converted_value = raw_value.to_i
+						converted_value = (converted_value.to_i == 0 ? false : true) unless (converted_value.is_a?(TrueClass) || converted_value.is_a?(FalseClass))
 					when :string
 						# nothing to do
 					when :text
 						# nothing to do
 					when :decimal
-						converted_value = raw_value.to_f # true ?
+						converted_value = converted_value.to_f # true ?
 					when :timestamp
 						# nothing to do (true ?)
 					when :references
@@ -215,11 +231,12 @@ module AgileAttribute
 						# unknown type ? impossible !
 						fail # TODO raise exception
 					end
+					final_value = converted_value
 				else
 					# no change
 				end
 				
-				return converted_value
+				return final_value
 			end # dynamic read accessor redefinition
 			
 		end # install_stuff_with_meta_programming
@@ -228,14 +245,15 @@ module AgileAttribute
 		def agile?
 			!agile_attribute.blank?
 		end
-	end
+		
+	end # module ClassMethods
 	
 	
 	module InstanceMethods
 		# none
 	end
 	
-end
+end # module AgileAttribute
 
 class ActiveRecord::Base
 	include AgileAttribute
